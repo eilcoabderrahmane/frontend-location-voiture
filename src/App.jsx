@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
-import { checkHealth, createCar } from './services/carService';
+import { checkHealth, createCar, getCars } from './services/carService';
+import PreReservationModal from './features/reservations/components/PreReservationModal';
+
+// Rôle Admin simulé : le système d'authentification/rôles n'existe pas encore.
+const isAdmin = true; // TODO: relier au vrai système de rôles plus tard
 
 function App() {
   const [backendStatus, setBackendStatus] = useState({ loading: true, ok: false, message: '' });
@@ -7,6 +11,12 @@ function App() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Liste des véhicules + pré-réservation VIP
+  const [cars, setCars] = useState([]);
+  const [carsLoading, setCarsLoading] = useState(true);
+  const [carsError, setCarsError] = useState('');
+  const [vehicleToReserve, setVehicleToReserve] = useState(null);
 
   // Formulaire d'ajout de véhicule (User Story : Ajouter un véhicule)
   const initialForm = {
@@ -23,22 +33,39 @@ function App() {
   const [formData, setFormData] = useState(initialForm);
 
   // Vérifier la connexion avec le Backend via .env
-  const testConnection = async () => {
+  // (setState uniquement après la réponse : utilisable directement dans useEffect)
+  const fetchHealth = () =>
+    checkHealth()
+      .then((data) => setBackendStatus({ loading: false, ok: true, message: data.message || 'API opérationnelle' }))
+      .catch((err) =>
+        setBackendStatus({
+          loading: false,
+          ok: false,
+          message: err.message || 'Impossible de joindre le backend'
+        })
+      );
+
+  const testConnection = () => {
     setBackendStatus({ loading: true, ok: false, message: 'Test de connexion en cours...' });
-    try {
-      const data = await checkHealth();
-      setBackendStatus({ loading: false, ok: true, message: data.message || 'API opérationnelle' });
-    } catch (err) {
-      setBackendStatus({
-        loading: false,
-        ok: false,
-        message: err.message || 'Impossible de joindre le backend'
-      });
-    }
+    fetchHealth();
+  };
+
+  // Charger la liste des véhicules
+  const fetchCars = () =>
+    getCars()
+      .then((list) => setCars(list))
+      .catch((err) => setCarsError(err.message || 'Impossible de charger les véhicules'))
+      .finally(() => setCarsLoading(false));
+
+  const loadCars = () => {
+    setCarsLoading(true);
+    setCarsError('');
+    fetchCars();
   };
 
   useEffect(() => {
-    testConnection();
+    fetchHealth();
+    fetchCars();
   }, []);
 
   const handleInputChange = (e) => {
@@ -66,6 +93,7 @@ function App() {
       setSuccessMsg(result.message || 'Véhicule ajouté avec succès dans la base de données !');
       setFormData(initialForm);
       setShowAddModal(false);
+      loadCars();
     } catch (err) {
       setErrorMsg(err.message || "Erreur lors de l'ajout du véhicule");
     } finally {
@@ -82,7 +110,7 @@ function App() {
             <span className="text-3xl">🚗</span>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white">Location Voitures</h1>
-              <p className="text-xs text-indigo-400 font-medium">Fonctionnalité : Ajouter un Véhicule</p>
+              <p className="text-xs text-indigo-400 font-medium">Gestion de la flotte &amp; pré-réservations VIP</p>
             </div>
           </div>
 
@@ -157,6 +185,110 @@ function App() {
             </button>
           </div>
         </section>
+
+        {/* Section Liste : Flotte de véhicules */}
+        <section id="fleet-section" className="bg-slate-800/40 rounded-2xl p-4 sm:p-6 border border-slate-700/60 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-white">Flotte de véhicules</h2>
+              <p className="text-xs text-slate-400">
+                {carsLoading ? 'Chargement...' : `${cars.length} véhicule${cars.length > 1 ? 's' : ''} enregistré${cars.length > 1 ? 's' : ''}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-950/70 text-amber-300 border border-amber-700/60">
+                  🛡️ Mode Admin
+                </span>
+              )}
+              <button
+                id="fleet-refresh"
+                onClick={loadCars}
+                disabled={carsLoading}
+                className="text-xs px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer disabled:opacity-50"
+              >
+                🔄 Actualiser
+              </button>
+            </div>
+          </div>
+
+          {carsError && (
+            <div className="p-3 rounded-lg bg-rose-950/80 border border-rose-700 text-rose-200 text-sm">
+              ⚠️ {carsError}
+            </div>
+          )}
+
+          {carsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[0, 1].map((i) => (
+                <div key={i} className="h-32 rounded-xl bg-slate-800/60 border border-slate-700/60 animate-pulse" />
+              ))}
+            </div>
+          ) : !carsError && cars.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">
+              Aucun véhicule enregistré pour le moment.
+            </p>
+          ) : (
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {cars.map((car) => (
+                <li
+                  key={car._id}
+                  className="group rounded-xl bg-slate-900/70 border border-slate-700/60 hover:border-indigo-600/60 p-4 flex flex-col gap-3 transition"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-950/70 border border-indigo-700/50 rounded-xl flex items-center justify-center text-xl">
+                        {car.type_vehicule === 'van' ? '🚐' : '🚗'}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-white">
+                          {car.marque} {car.modele}
+                        </h3>
+                        <p className="text-xs font-mono text-indigo-300">{car.immatriculation}</p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 capitalize">
+                      {car.type_carburant}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                    <span>📍 {Number(car.kilometrage).toLocaleString('fr-FR')} km</span>
+                    <span>⛽ {car.consommation} L/100km</span>
+                  </div>
+
+                  {isAdmin && (
+                    <button
+                      id={`pre-reserver-${car._id}`}
+                      onClick={() => {
+                        setErrorMsg('');
+                        setSuccessMsg('');
+                        setVehicleToReserve(car);
+                      }}
+                      className="mt-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/20 transition transform hover:-translate-y-0.5 cursor-pointer"
+                    >
+                      <span>⭐</span>
+                      <span>Pré-réserver</span>
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* Modal de pré-réservation VIP (Admin) */}
+        {isAdmin && vehicleToReserve && (
+          <PreReservationModal
+            vehicle={vehicleToReserve}
+            onClose={() => setVehicleToReserve(null)}
+            onSuccess={(message) => {
+              setVehicleToReserve(null);
+              setSuccessMsg(message);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
 
         {/* Modal d'ajout de véhicule */}
         {showAddModal && (
