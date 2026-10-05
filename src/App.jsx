@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { checkHealth, createCar, getCars } from './services/carService';
 import PreReservationModal from './features/reservations/components/PreReservationModal';
+import ReservationVIPList from './features/reservations/components/ReservationVIPList';
+import ReservationSystem from './features/reservations/components/ReservationSystem';
 // Import ajouté depuis la branche main
 import CarsPage from './features/cars/pages/CarsPage';
 
@@ -13,6 +15,9 @@ function App() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Navigation
+  const [currentView, setCurrentView] = useState('fleet'); // 'fleet' ou 'vip'
 
   // Liste des véhicules + pré-réservation VIP
   const [cars, setCars] = useState([]);
@@ -115,30 +120,58 @@ function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
-                backendStatus.ok
+          <div className="flex items-center gap-4">
+            {/* Menu Navigation */}
+            <nav className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg p-1">
+              <button
+                onClick={() => setCurrentView('fleet')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${currentView === 'fleet' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  }`}
+              >
+                Flotte
+              </button>
+              <button
+                onClick={() => setCurrentView('reservation')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${currentView === 'reservation' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  }`}
+              >
+                Réservation
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setCurrentView('vip')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${currentView === 'vip' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    }`}
+                >
+                  Réservations VIP
+                </button>
+              )}
+            </nav>
+
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${backendStatus.ok
                   ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60'
                   : 'bg-rose-950/80 text-rose-300 border-rose-700/60'
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full ${backendStatus.ok ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`}
-              />
-              {backendStatus.loading
-                ? 'Connexion...'
-                : backendStatus.ok
-                ? 'Backend Connecté'
-                : 'Backend Hors Ligne'}
-            </span>
-            <button
-              onClick={testConnection}
-              className="text-xs px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
-              title="Tester la connexion API"
-            >
-              🔄 Re-tester
-            </button>
+                  }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${backendStatus.ok ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`}
+                />
+                {backendStatus.loading
+                  ? 'Connexion...'
+                  : backendStatus.ok
+                    ? 'Backend Connecté'
+                    : 'Backend Hors Ligne'}
+              </span>
+              <button
+                onClick={testConnection}
+                className="text-xs px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+                title="Tester la connexion API"
+              >
+                🔄 Re-tester
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -160,123 +193,130 @@ function App() {
           </div>
         )}
 
-        {/* Section Action : Ajouter un Véhicule */}
-        <section className="bg-slate-800/40 rounded-2xl p-8 border border-slate-700/60 text-center space-y-6">
-          <div className="max-w-md mx-auto space-y-2">
-            <div className="w-16 h-16 bg-indigo-950/70 border border-indigo-700/50 text-indigo-400 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-inner">
-              🚙
-            </div>
-            <h2 className="text-xl font-bold text-white">Ajouter un Véhicule</h2>
-            <p className="text-sm text-slate-400">
-              Enregistrez un nouveau véhicule dans le système via l'API backend reliée à MongoDB.
-            </p>
-          </div>
+        {currentView === 'fleet' && (
+          <>
+            {/* Section Action : Ajouter un Véhicule */}
+            <section className="bg-slate-800/40 rounded-2xl p-8 border border-slate-700/60 text-center space-y-6">
+              <div className="max-w-md mx-auto space-y-2">
+                <div className="w-16 h-16 bg-indigo-950/70 border border-indigo-700/50 text-indigo-400 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-inner">
+                  🚙
+                </div>
+                <h2 className="text-xl font-bold text-white">Ajouter un Véhicule</h2>
+                <p className="text-sm text-slate-400">
+                  Enregistrez un nouveau véhicule dans le système via l'API backend reliée à MongoDB.
+                </p>
+              </div>
 
-          <div>
-            <button
-              onClick={() => {
-                setErrorMsg('');
-                setSuccessMsg('');
-                setShowAddModal(true);
-              }}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 transition transform hover:-translate-y-0.5 cursor-pointer"
-            >
-              <span className="text-lg">➕</span>
-              <span>Ajouter un Véhicule</span>
-            </button>
-          </div>
-        </section>
-
-        {/* Section Liste : Flotte de véhicules de la branche feature */}
-        <section id="fleet-section" className="bg-slate-800/40 rounded-2xl p-4 sm:p-6 border border-slate-700/60 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-white">Flotte de véhicules (Vue VIP)</h2>
-              <p className="text-xs text-slate-400">
-                {carsLoading ? 'Chargement...' : `${cars.length} véhicule${cars.length > 1 ? 's' : ''} enregistré${cars.length > 1 ? 's' : ''}`}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {isAdmin && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-950/70 text-amber-300 border border-amber-700/60">
-                  🛡️ Mode Admin
-                </span>
-              )}
-              <button
-                id="fleet-refresh"
-                onClick={loadCars}
-                disabled={carsLoading}
-                className="text-xs px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer disabled:opacity-50"
-              >
-                🔄 Actualiser
-              </button>
-            </div>
-          </div>
-
-          {carsError && (
-            <div className="p-3 rounded-lg bg-rose-950/80 border border-rose-700 text-rose-200 text-sm">
-              ⚠️ {carsError}
-            </div>
-          )}
-
-          {carsLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[0, 1].map((i) => (
-                <div key={i} className="h-32 rounded-xl bg-slate-800/60 border border-slate-700/60 animate-pulse" />
-              ))}
-            </div>
-          ) : !carsError && cars.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-6">
-              Aucun véhicule enregistré pour le moment.
-            </p>
-          ) : (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {cars.map((car) => (
-                <li
-                  key={car._id}
-                  className="group rounded-xl bg-slate-900/70 border border-slate-700/60 hover:border-indigo-600/60 p-4 flex flex-col gap-3 transition"
+              <div>
+                <button
+                  onClick={() => {
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                    setShowAddModal(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 transition transform hover:-translate-y-0.5 cursor-pointer"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-indigo-950/70 border border-indigo-700/50 rounded-xl flex items-center justify-center text-xl">
-                        {car.type_vehicule === 'van' ? '🚐' : '🚗'}
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-white">
-                          {car.marque} {car.modele}
-                        </h3>
-                        <p className="text-xs font-mono text-indigo-300">{car.immatriculation}</p>
-                      </div>
-                    </div>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 capitalize">
-                      {car.type_carburant}
-                    </span>
-                  </div>
+                  <span className="text-lg">➕</span>
+                  <span>Ajouter un Véhicule</span>
+                </button>
+              </div>
+            </section>
 
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-                    <span>📍 {Number(car.kilometrage).toLocaleString('fr-FR')} km</span>
-                    <span>⛽ {car.consommation} L/100km</span>
-                  </div>
-
+            {/* Section Liste : Flotte de véhicules de la branche feature */}
+            <section id="fleet-section" className="bg-slate-800/40 rounded-2xl p-4 sm:p-6 border border-slate-700/60 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-white">Flotte de véhicules (Vue VIP)</h2>
+                  <p className="text-xs text-slate-400">
+                    {carsLoading ? 'Chargement...' : `${cars.length} véhicule${cars.length > 1 ? 's' : ''} enregistré${cars.length > 1 ? 's' : ''}`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
                   {isAdmin && (
-                    <button
-                      id={`pre-reserver-${car._id}`}
-                      onClick={() => {
-                        setErrorMsg('');
-                        setSuccessMsg('');
-                        setVehicleToReserve(car);
-                      }}
-                      className="mt-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/20 transition transform hover:-translate-y-0.5 cursor-pointer"
-                    >
-                      <span>⭐</span>
-                      <span>Pré-réserver</span>
-                    </button>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-950/70 text-amber-300 border border-amber-700/60">
+                      🛡️ Mode Admin
+                    </span>
                   )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+                  <button
+                    id="fleet-refresh"
+                    onClick={loadCars}
+                    disabled={carsLoading}
+                    className="text-xs px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer disabled:opacity-50"
+                  >
+                    🔄 Actualiser
+                  </button>
+                </div>
+              </div>
+
+              {carsError && (
+                <div className="p-3 rounded-lg bg-rose-950/80 border border-rose-700 text-rose-200 text-sm">
+                  ⚠️ {carsError}
+                </div>
+              )}
+
+              {carsLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[0, 1].map((i) => (
+                    <div key={i} className="h-32 rounded-xl bg-slate-800/60 border border-slate-700/60 animate-pulse" />
+                  ))}
+                </div>
+              ) : !carsError && cars.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-6">
+                  Aucun véhicule enregistré pour le moment.
+                </p>
+              ) : (
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {cars.map((car) => (
+                    <li
+                      key={car._id}
+                      className="group rounded-xl bg-slate-900/70 border border-slate-700/60 hover:border-indigo-600/60 p-4 flex flex-col gap-3 transition"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-indigo-950/70 border border-indigo-700/50 rounded-xl flex items-center justify-center text-xl">
+                            {car.type_vehicule === 'van' ? '🚐' : '🚗'}
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-semibold text-white">
+                              {car.marque} {car.modele}
+                            </h3>
+                            <p className="text-xs font-mono text-indigo-300">{car.immatriculation}</p>
+                          </div>
+                        </div>
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 capitalize">
+                          {car.type_carburant}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                        <span>📍 {Number(car.kilometrage).toLocaleString('fr-FR')} km</span>
+                        <span>⛽ {car.consommation} L/100km</span>
+                      </div>
+
+                      {isAdmin && (
+                        <button
+                          id={`pre-reserver-${car._id}`}
+                          onClick={() => {
+                            setErrorMsg('');
+                            setSuccessMsg('');
+                            setVehicleToReserve(car);
+                          }}
+                          className="mt-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/20 transition transform hover:-translate-y-0.5 cursor-pointer"
+                        >
+                          <span>⭐</span>
+                          <span>Pré-réserver</span>
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        )}
+        
+        {currentView === 'vip' && <ReservationVIPList />}
+        {currentView === 'reservation' && <ReservationSystem />}
 
         {/* Section CarsPage issue de la branche Main */}
         <section className="mt-8 pt-8 border-t border-slate-800">

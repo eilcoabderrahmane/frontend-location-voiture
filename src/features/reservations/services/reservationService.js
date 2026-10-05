@@ -33,3 +33,47 @@ export async function createReservationVIP(reservationData) {
   }
   return data;
 }
+
+/**
+ * Récupère la liste des pré-réservations VIP
+ */
+export async function getReservationsVIP() {
+  const response = await fetch(`${API_URL}/rentals/vip`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || `Erreur lors du chargement des réservations (${response.status})`);
+  }
+  return data.data || [];
+}
+
+/**
+ * Vérifie la disponibilité des véhicules entre deux dates
+ * @param {string} start_date (YYYY-MM-DD)
+ * @param {string} end_date (YYYY-MM-DD)
+ */
+export async function checkAvailability(start_date, end_date) {
+  const response = await fetch(`${API_URL}/reservations/availability?start_date=${start_date}&end_date=${end_date}`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || `Erreur de vérification (${response.status})`);
+  }
+  return data.data || [];
+}
+
+/**
+ * Crée une réservation standard
+ * @param {Object} reservationData 
+ */
+export async function createReservation(reservationData) {
+  const response = await fetch(`${API_URL}/reservations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(reservationData)
+  });
+  
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || `Erreur lors de la réservation (${response.status})`);
+  }
+  return data;
+}
