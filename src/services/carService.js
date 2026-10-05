@@ -12,6 +12,27 @@ export async function checkHealth() {
 }
 
 /**
+ * Récupère la liste des véhicules avec filtrage optionnel par marque.
+ * @param {string} marque
+ */
+export async function getCars(marque = '') {
+  const params = new URLSearchParams();
+  if (marque) {
+    params.append('marque', marque);
+  }
+
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const response = await fetch(`${API_URL}/cars${queryString}`);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || `Erreur (${response.status})`);
+  }
+
+  return data;
+}
+
+/**
  * Ajoute un nouveau véhicule (User Story : "Ajouter un véhicule")
  * @param {Object} carData
  */
