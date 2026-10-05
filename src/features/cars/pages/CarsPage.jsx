@@ -119,42 +119,6 @@ export default function CarsPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">🚗</span>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">Location Voitures</h1>
-              <p className="text-xs text-indigo-400 font-medium">Gestion de la flotte</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
-                backendStatus.ok
-                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60'
-                  : 'bg-rose-950/80 text-rose-300 border-rose-700/60'
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full ${backendStatus.ok ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`}
-              />
-              {backendStatus.loading
-                ? 'Connexion...'
-                : backendStatus.ok
-                  ? 'Backend Connecté'
-                  : 'Backend Hors Ligne'}
-            </span>
-            <button
-              onClick={testConnection}
-              className="text-xs px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
-            >
-              🔄 Re-tester
-            </button>
-          </div>
-        </div>
-      </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 space-y-6">
         {errorMsg && (
@@ -192,17 +156,6 @@ export default function CarsPage() {
                   className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 min-w-[180px]"
                 />
               </div>
-              <button
-                onClick={() => {
-                  setErrorMsg('');
-                  setSuccessMsg('');
-                  setShowAddModal(true);
-                }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/20 transition"
-              >
-                <span>➕</span>
-                Ajouter
-              </button>
             </div>
           </div>
         </section>
