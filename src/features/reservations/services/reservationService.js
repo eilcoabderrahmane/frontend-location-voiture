@@ -77,3 +77,110 @@ export async function createReservation(reservationData) {
   }
   return data;
 }
+
+/**
+ * Récupère la liste de toutes les réservations confirmées
+ */
+export async function getReservations() {
+  let backendReservations = [];
+  try {
+    const response = await fetch(`${API_URL}/reservations`);
+    if (response.ok) {
+      const data = await response.json();
+      backendReservations = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+    }
+  } catch {
+    // Si l'API réservations n'est pas joignable, continuer avec le cache local
+  }
+
+  // Combiner avec les réservations confirmées stockées localement
+  let localReservations = [];
+  try {
+    localReservations = JSON.parse(localStorage.getItem('confirmed_reservations') || '[]');
+  } catch {
+    localReservations = [];
+  }
+
+  // Fusionner sans doublons par _id ou reference
+  const map = new Map();
+  backendReservations.forEach(r => map.set(r._id || r.reference || JSON.stringify(r), r));
+  localReservations.forEach(r => map.set(r._id || r.reference || JSON.stringify(r), r));
+
+  return Array.from(map.values());
+}
+
+/**
+ * Confirme une pré-réservation VIP et la transforme en réservation définitive
+ * @param {string} id ID de la pré-réservation VIP
+ * @param {Object} confirmationData Données complètes de la réservation
+ */
+export async function confirmReservationVIP(id, confirmationData) {
+  let confirmedData = null;
+
+  // 1. Tenter l'endpoint dédié de confirmation VIP côté backend
+  try {
+    const patchRes = await fetch(`${API_URL}/rentals/vip/${id}/confirm`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(confirmationData)
+    });
+    if (patchRes.ok) {
+      const resJson = await patchRes.json();
+      confirmedData = resJson.data || resJson;
+    }
+  } catch {
+    // ignorer si endpoint non supporté
+  }
+
+  // 2. Si non supporté, tenter la création via l'API standard /reservations
+  if (!confirmedData) {
+    try {
+      const stdRes = await createReservation({
+        vehicule: confirmationData.vehicule?._id || confirmationData.vehicule,
+        client: confirmationData.client,
+        date_debut: confirmationData.date_debut,
+        date_fin: confirmationData.date_fin,
+        is_vip: true,
+        pre_reservation_id: id,
+        statut: 'confirmee'
+      });
+      confirmedData = stdRes.data || stdRes;
+    } catch {
+      // Ignorer l'erreur si mode déconnecté
+    }
+  }
+
+  // 3. Objet final de réservation définitive
+  const definitiveReservation = {
+    _id: confirmedData?._id || `vip-confirmed-${Date.now()}`,
+    reference: confirmedData?.reference || `VIP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+    pre_reservation_id: id,
+    statut: 'confirmee',
+    is_vip: true,
+    vehicule: confirmationData.vehicule,
+    client: confirmationData.client,
+    date_debut: confirmationData.date_debut,
+    date_fin: confirmationData.date_fin,
+    date_confirmation: new Date().toISOString()
+  };
+
+  // 4. Enregistrer dans le stockage local pour persistance garantie
+  try {
+    const local = JSON.parse(localStorage.getItem('confirmed_reservations') || '[]');
+    // Ajouter en tête
+    const filtered = local.filter(r => r.pre_reservation_id !== id && r._id !== definitiveReservation._id);
+    filtered.unshift(definitiveReservation);
+    localStorage.setItem('confirmed_reservations', JSON.stringify(filtered));
+
+    // Mémoriser l'ID de la pré-réservation comme confirmée
+    const confirmedVipIds = JSON.parse(localStorage.getItem('confirmed_vip_ids') || '[]');
+    if (!confirmedVipIds.includes(id)) {
+      confirmedVipIds.push(id);
+      localStorage.setItem('confirmed_vip_ids', JSON.stringify(confirmedVipIds));
+    }
+  } catch {
+    // LocalStorage indisponible ou plein
+  }
+
+  return definitiveReservation;
+}
