@@ -31,18 +31,14 @@ function formatNumber(value) {
 export default function CarsPage() {
   const [backendStatus, setBackendStatus] = useState({ loading: true, ok: false, message: '' });
   const [cars, setCars] = useState([]);
-  const [selectedBrand, setSelectedBrand] = useState('Toutes');
+  const [brandFilter, setBrandFilter] = useState('');
+  const [visibleCount, setVisibleCount] = useState(5);
   const [loadingCars, setLoadingCars] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState(initialForm);
-
-  const uniqueBrands = useMemo(
-    () => [...new Set(cars.map((car) => car.marque).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
-    [cars]
-  );
 
   const testConnection = async () => {
     setBackendStatus({ loading: true, ok: false, message: 'Test de connexion en cours...' });
@@ -58,15 +54,17 @@ export default function CarsPage() {
     }
   };
 
-  const loadCars = async (brand = selectedBrand) => {
+  const loadCars = async (brand = brandFilter) => {
     setLoadingCars(true);
     setErrorMsg('');
     try {
-      const data = await getCars(brand && brand !== 'Toutes' ? brand : '');
+      const data = await getCars(brand || '');
       setCars(data.data || []);
+      setVisibleCount(5);
     } catch (err) {
       setErrorMsg(err.message || 'Erreur lors du chargement des véhicules');
       setCars([]);
+      setVisibleCount(5);
     } finally {
       setLoadingCars(false);
     }
@@ -74,14 +72,17 @@ export default function CarsPage() {
 
   useEffect(() => {
     testConnection();
-    loadCars('Toutes');
+    loadCars('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    loadCars(selectedBrand);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBrand]);
+    const timeoutId = setTimeout(() => {
+      loadCars(brandFilter);
+    }, 200);
+
+    return () => clearTimeout(timeoutId);
+  }, [brandFilter]);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -108,7 +109,7 @@ export default function CarsPage() {
       setSuccessMsg(result.message || 'Véhicule ajouté avec succès dans la base de données !');
       setFormData(initialForm);
       setShowAddModal(false);
-      loadCars(selectedBrand);
+      loadCars(brandFilter);
     } catch (err) {
       setErrorMsg(err.message || "Erreur lors de l'ajout du véhicule");
     } finally {
@@ -176,19 +177,21 @@ export default function CarsPage() {
               <h2 className="mt-2 text-2xl font-bold text-white">Liste des véhicules</h2>
             </div>
 
-            <div className="flex items-center gap-3">
-              <label htmlFor="brand-filter" className="text-sm text-slate-300">Filtrer par marque</label>
-              <select
-                id="brand-filter"
-                value={selectedBrand}
-                onChange={(event) => setSelectedBrand(event.target.value)}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-              >
-                <option value="Toutes">Toutes les marques</option>
-                {uniqueBrands.map((brand) => (
-                  <option key={brand} value={brand}>{brand}</option>
-                ))}
-              </select>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label htmlFor="brand-filter" className="text-sm text-slate-300 whitespace-nowrap">Marque</label>
+                <input
+                  id="brand-filter"
+                  type="text"
+                  value={brandFilter}
+                  onChange={(event) => {
+                    setBrandFilter(event.target.value);
+                    setVisibleCount(5);
+                  }}
+                  placeholder="Saisir une marque"
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 min-w-[180px]"
+                />
+              </div>
               <button
                 onClick={() => {
                   setErrorMsg('');
@@ -234,7 +237,7 @@ export default function CarsPage() {
                     </td>
                   </tr>
                 ) : (
-                  cars.map((car) => (
+                  cars.slice(0, visibleCount).map((car) => (
                     <tr key={car._id || car.immatriculation} className="border-t border-slate-800 hover:bg-slate-800/50 transition">
                       <td className="px-4 py-3 font-medium text-white">{car.marque}</td>
                       <td className="px-4 py-3">{car.modele}</td>
@@ -251,6 +254,18 @@ export default function CarsPage() {
               </tbody>
             </table>
           </div>
+
+          {cars.length > visibleCount && !loadingCars && (
+            <div className="p-4 border-t border-slate-800 bg-slate-900/60">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((current) => Math.min(current + 5, cars.length))}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-medium transition"
+              >
+                Voir plus
+              </button>
+            </div>
+          )}
         </section>
 
         {showAddModal && (
