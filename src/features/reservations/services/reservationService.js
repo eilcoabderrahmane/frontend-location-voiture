@@ -46,6 +46,28 @@ export async function getReservationsVIP() {
   return data.data || [];
 }
 
+export async function getReservations() {
+  const response = await fetch(`${API_URL}/reservations`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || `Erreur lors du chargement des réservations (${response.status})`);
+  }
+  return data.data || [];
+}
+
+export async function cancelReservation(reservationId) {
+  const response = await fetch(`${API_URL}/reservations/${reservationId}/cancel`, {
+    method: 'PATCH'
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || `Erreur lors de l'annulation (${response.status})`);
+  }
+
+  return data;
+}
+
 /**
  * Vérifie la disponibilité des véhicules entre deux dates
  * @param {string} start_date (YYYY-MM-DD)

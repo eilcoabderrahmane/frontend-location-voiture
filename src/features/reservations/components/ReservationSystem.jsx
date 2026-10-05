@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { checkAvailability, createReservation } from '../services/reservationService';
+import React, { useState, useEffect } from 'react';
+import { cancelReservation, checkAvailability, createReservation, getReservations } from '../services/reservationService';
 
 function ReservationSystem() {
   const [dates, setDates] = useState({ start: '', end: '' });
@@ -12,6 +12,25 @@ function ReservationSystem() {
   const [reservationLoading, setReservationLoading] = useState(false);
   const [reservationError, setReservationError] = useState('');
   const [reservationSuccess, setReservationSuccess] = useState(null);
+  const [reservations, setReservations] = useState([]);
+  const [reservationsLoading, setReservationsLoading] = useState(false);
+  const [reservationNotice, setReservationNotice] = useState(null);
+
+  const loadReservations = async () => {
+    setReservationsLoading(true);
+    try {
+      const data = await getReservations();
+      setReservations(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setReservationsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadReservations();
+  }, []);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -48,6 +67,8 @@ function ReservationSystem() {
         date_fin: dates.end
       });
       setReservationSuccess(response.data);
+      setReservationNotice(null);
+      setReservations(prev => [response.data, ...prev]);
       // Retirer le véhicule de la liste
       setAvailableCars(prev => prev.filter(c => c._id !== selectedCar._id));
       setSelectedCar(null);
@@ -56,6 +77,21 @@ function ReservationSystem() {
       setReservationError(err.message);
     } finally {
       setReservationLoading(false);
+    }
+  };
+
+  const handleCancelReservation = async (reservationId) => {
+    const confirmed = window.confirm('Voulez-vous vraiment annuler cette réservation ?');
+    if (!confirmed) return;
+
+    try {
+      await cancelReservation(reservationId);
+      setReservations(prev => prev.map(res =>
+        res._id === reservationId ? { ...res, statut: 'Annulée' } : res
+      ));
+      setReservationNotice({ type: 'success', message: 'Réservation annulée avec succès.' });
+    } catch (err) {
+      setReservationNotice({ type: 'error', message: err.message || 'L’annulation a échoué.' });
     }
   };
 
@@ -139,6 +175,66 @@ function ReservationSystem() {
           </button>
         </div>
       )}
+
+      {reservationNotice && (
+        <div className={`p-3 rounded-lg border text-sm ${reservationNotice.type === 'success'
+          ? 'bg-emerald-950/80 border-emerald-700 text-emerald-200'
+          : 'bg-rose-950/80 border-rose-700 text-rose-200'}`}>
+          {reservationNotice.type === 'success' ? '✅' : '⚠️'} {reservationNotice.message}
+        </div>
+      )}
+
+      <section className="bg-slate-800/40 rounded-2xl p-6 border border-slate-700/60">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h2 className="text-xl font-bold text-white">Réservations</h2>
+          <button
+            type="button"
+            onClick={loadReservations}
+            disabled={reservationsLoading}
+            className="text-xs px-3 py-1 rounded-md bg-slate-900 hover:bg-slate-700 text-slate-200 border border-slate-700 transition disabled:opacity-50"
+          >
+            {reservationsLoading ? 'Chargement...' : 'Actualiser'}
+          </button>
+        </div>
+
+        {reservations.length === 0 ? (
+          <p className="text-sm text-slate-400">Aucune réservation enregistrée pour le moment.</p>
+        ) : (
+          <div className="space-y-3">
+            {reservations.map((reservation) => (
+              <div key={reservation._id} className="rounded-xl bg-slate-900/70 border border-slate-700/60 p-4 flex flex-col sm:flex-row justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-white">{reservation.reference}</p>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${reservation.statut === 'Annulée'
+                      ? 'bg-rose-950/80 border-rose-700 text-rose-200'
+                      : 'bg-emerald-950/80 border-emerald-700 text-emerald-200'}`}>
+                      {reservation.statut || 'Confirmée'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {reservation.client?.prenom} {reservation.client?.nom} • {new Date(reservation.date_debut).toLocaleDateString('fr-FR')} → {new Date(reservation.date_fin).toLocaleDateString('fr-FR')}
+                  </p>
+                  {reservation.vehicule && (
+                    <p className="text-xs text-indigo-300 mt-1">
+                      {reservation.vehicule.marque} {reservation.vehicule.modele} • {reservation.vehicule.immatriculation}
+                    </p>
+                  )}
+                </div>
+                {reservation.statut !== 'Annulée' && (
+                  <button
+                    type="button"
+                    onClick={() => handleCancelReservation(reservation._id)}
+                    className="text-xs px-3 py-1.5 rounded-md border border-rose-700 bg-rose-950/80 text-rose-200 hover:bg-rose-900 transition"
+                  >
+                    Annuler
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* 3. Formulaire de réservation */}
       {selectedCar && (
