@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { checkHealth, createCar, getCars } from './services/carService';
 import PreReservationModal from './features/reservations/components/PreReservationModal';
+// Import ajouté depuis la branche main
+import CarsPage from './features/cars/pages/CarsPage';
 
 // Rôle Admin simulé : le système d'authentification/rôles n'existe pas encore.
 const isAdmin = true; // TODO: relier au vrai système de rôles plus tard
@@ -33,7 +35,6 @@ function App() {
   const [formData, setFormData] = useState(initialForm);
 
   // Vérifier la connexion avec le Backend via .env
-  // (setState uniquement après la réponse : utilisable directement dans useEffect)
   const fetchHealth = () =>
     checkHealth()
       .then((data) => setBackendStatus({ loading: false, ok: true, message: data.message || 'API opérationnelle' }))
@@ -186,11 +187,11 @@ function App() {
           </div>
         </section>
 
-        {/* Section Liste : Flotte de véhicules */}
+        {/* Section Liste : Flotte de véhicules de la branche feature */}
         <section id="fleet-section" className="bg-slate-800/40 rounded-2xl p-4 sm:p-6 border border-slate-700/60 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-bold text-white">Flotte de véhicules</h2>
+              <h2 className="text-lg font-bold text-white">Flotte de véhicules (Vue VIP)</h2>
               <p className="text-xs text-slate-400">
                 {carsLoading ? 'Chargement...' : `${cars.length} véhicule${cars.length > 1 ? 's' : ''} enregistré${cars.length > 1 ? 's' : ''}`}
               </p>
@@ -275,6 +276,17 @@ function App() {
               ))}
             </ul>
           )}
+        </section>
+
+        {/* Section CarsPage issue de la branche Main */}
+        <section className="mt-8 pt-8 border-t border-slate-800">
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-white">Interface Principale (CarsPage)</h2>
+            <p className="text-xs text-slate-400">Composant récupéré depuis la branche main.</p>
+          </div>
+          <div className="bg-slate-900 rounded-2xl border border-slate-700/60 overflow-hidden">
+            <CarsPage />
+          </div>
         </section>
 
         {/* Modal de pré-réservation VIP (Admin) */}
