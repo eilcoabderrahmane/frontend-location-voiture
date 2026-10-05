@@ -54,7 +54,7 @@ function App() {
   // Charger la liste des véhicules
   const fetchCars = () =>
     getCars()
-      .then((list) => setCars(list))
+      .then((res) => setCars(res.data || res || []))
       .catch((err) => setCarsError(err.message || 'Impossible de charger les véhicules'))
       .finally(() => setCarsLoading(false));
 
