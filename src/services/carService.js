@@ -51,3 +51,15 @@ export async function createCar(carData) {
   }
   return data;
 }
+
+/**
+ * Récupère la liste des véhicules
+ */
+export async function getCars() {
+  const response = await fetch(`${API_URL}/cars`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || `Erreur lors du chargement des véhicules (${response.status})`);
+  }
+  return data.data || [];
+}
